@@ -11,7 +11,6 @@ const BOUNCE = 17
 const SPEED = 11.5
 const AIR = 28
 const GROUND_ACCEL = 58
-const FRICTION = 16
 const COYOTE = 0.14
 const BUFFER = 0.12
 const COLOR_KEY = 'softcube-cube'
@@ -327,10 +326,8 @@ export class Game {
       this.vx = (this.vx / speed) * cap
       this.vz = (this.vz / speed) * cap
     }
-    if (this.onGround) {
-      this.vx *= Math.exp(-FRICTION * dt)
-      this.vz *= Math.exp(-FRICTION * dt)
-    }
+    if (this.input.x === 0) this.vx = 0
+    if (this.input.z === 0) this.vz = 0
 
     if (this.buffer > 0 && this.coyote > 0) {
       this.vy = JUMP
@@ -415,6 +412,9 @@ export class Game {
       const hy = body.spec.sy / 2
       const hz = body.spec.sz / 2
       if (!overlap(this.px, this.py, this.pz, HALF, HALF, HALF, body.x, body.y, body.z, hx, hy, hz)) continue
+
+      const onTop = this.py - HALF >= body.y + hy - 0.08
+      if ((axis === 'x' || axis === 'z') && onTop) continue
 
       if (axis === 'x') {
         this.px = this.px < body.x ? body.x - hx - HALF - 0.001 : body.x + hx + HALF + 0.001

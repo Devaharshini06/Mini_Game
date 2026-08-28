@@ -90,11 +90,12 @@ export function buildLevel(level: number): Spec[] {
       x = pair === 0 ? 0 : pair === 1 ? lane : -lane
     }
     if (i === 5 && xs.length >= 4) x = xs[3]
+    if (i >= steps - 1) x = 0
     xs.push(x)
 
     let kind: Kind = 'solid'
     const extra: Partial<Spec> = {}
-    const safe = i === 1 || i === 4 || i === 5 || i === steps
+    const safe = i === 1 || i === 4 || i === 5 || i === steps || i === steps - 1
 
     if (!safe) {
       if (n >= 18 && i === 3) {
@@ -131,9 +132,9 @@ export function buildLevel(level: number): Spec[] {
     }
   }
 
-  z += stride * 0.86
-  y += 0.32
   const goal = Math.max(size + 0.7, 3.15)
+  z += size / 2 + goal / 2 + 1.6
+  y += 0.32
   add(block(0, y, z, goal, 1.15, goal, 'goal', GOLD))
   add(block(0, y + 1.12, z, 1.35, 1.35, 1.35, 'goal', CREAM))
 
