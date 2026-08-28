@@ -39,12 +39,30 @@ html, body {
   gap: 12px;
 }
 
+.brand-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .brand {
   font-family: Fredoka, sans-serif;
   font-weight: 700;
   font-size: 1.6rem;
   color: var(--pink-hot);
   text-shadow: 0 6px 16px rgba(255, 111, 168, 0.35);
+}
+
+.swatches.mini {
+  margin: 0;
+  justify-content: flex-start;
+}
+
+.swatches.mini .swatch {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
 }
 
 .stats {
@@ -145,6 +163,73 @@ button {
   background: linear-gradient(135deg, var(--pink), var(--pink-hot));
   color: white;
   box-shadow: 0 12px 24px rgba(255, 110, 168, 0.35);
+}
+
+.setup {
+  margin: -6px 0 18px;
+}
+
+.swatches {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 14px;
+  pointer-events: auto;
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  box-shadow: 0 6px 14px rgba(80, 40, 110, 0.18);
+  border: 3px solid transparent;
+}
+
+.swatch.on {
+  border-color: #fff8fc;
+  box-shadow: 0 0 0 2px #ff6ea8, 0 6px 14px rgba(80, 40, 110, 0.18);
+}
+
+.level-pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  pointer-events: auto;
+}
+
+.level-pick button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: rgba(255, 248, 252, 0.9);
+  color: var(--ink);
+  box-shadow: 0 8px 16px rgba(80, 40, 110, 0.12);
+}
+
+.level-pick span {
+  min-width: 8.5rem;
+  font-weight: 800;
+  color: #6a4a7c;
+}
+
+.win-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+button.ghost {
+  background: rgba(255, 248, 252, 0.9);
+  color: var(--ink);
+  box-shadow: 0 8px 16px rgba(80, 40, 110, 0.12);
+}
+
+.stats {
+  pointer-events: none;
 }
 
 #touch {

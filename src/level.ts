@@ -24,6 +24,8 @@ export type Spec = {
   phase?: number
 }
 
+export const LEVEL_MAX = 50
+
 const PINK = 0xff9ec8
 const PINK2 = 0xff7ab4
 const BLUE = 0x7ecbff
@@ -32,6 +34,7 @@ const LILAC = 0xe3d4ff
 const CREAM = 0xfff0f8
 const HAZARD = 0xff4f8a
 const GOLD = 0xffe08a
+const TONES = [PINK, BLUE, PINK2, BLUE2, LILAC]
 
 function block(
   x: number,
@@ -47,71 +50,100 @@ function block(
   return { x, y, z, sx, sy, sz, kind, color, ...extra }
 }
 
-export function buildCourse(): Spec[] {
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * Math.min(1, Math.max(0, t))
+}
+
+function tone(level: number, i: number) {
+  return TONES[(level + i) % TONES.length]
+}
+
+export function buildLevel(level: number): Spec[] {
+  const n = Math.max(1, Math.min(LEVEL_MAX, Math.round(level)))
+  const t = (n - 1) / (LEVEL_MAX - 1)
   const p: Spec[] = []
   const add = (...items: Spec[]) => p.push(...items)
 
-  add(block(0, 0, 0, 10, 1, 10, 'solid', PINK))
-  add(block(0, 0.9, -3.4, 2, 0.8, 2, 'check', CREAM))
+  const size = lerp(3.55, 2.2, t * 0.82)
+  const clearance = lerp(1.55, 2.4, t)
+  const tight = lerp(0.28, 0.85, t)
+  const stride = size + clearance
+  const rise = lerp(0.14, 0.36, t)
+  const steps = 8 + Math.floor(t * 4)
+  const lane = n >= 10 ? lerp(1.15, 2.05, Math.min(1, (n - 10) / 16)) : 0
 
-  add(block(0, 0.2, 9, 3.2, 1, 3.2, 'solid', BLUE))
-  add(block(0, 0.5, 15, 2.6, 1, 2.6, 'solid', PINK2))
-  add(block(0, 0.9, 21, 2.4, 1, 2.4, 'solid', BLUE2))
-  add(block(2.4, 1.2, 27, 2.2, 1, 2.2, 'solid', PINK))
-  add(block(-2.2, 1.6, 33, 2.2, 1, 2.2, 'solid', BLUE))
-  add(block(0, 2, 40, 4, 1, 4, 'check', CREAM))
+  add(block(0, 0, 0, 9, 1, 9, 'solid', PINK))
+  add(block(0, 0.85, -2.6, 1.85, 0.7, 1.85, 'check', CREAM))
 
-  add(block(0, 2, 48, 2.4, 1, 2.4, 'moveX', PINK2, { amp: 3.2, speed: 1.1 }))
-  add(block(0, 2.4, 56, 2.2, 1, 2.2, 'moveX', BLUE, { amp: 3.6, speed: 1.35, phase: 1.2 }))
-  add(block(0, 2.8, 64, 2.4, 1, 2.4, 'solid', LILAC))
-  add(block(0, 2.8, 70, 2, 1, 6, 'solid', PINK))
-  add(block(0, 3.2, 78, 3.4, 1, 3.4, 'check', CREAM))
+  const xs: number[] = []
+  let z = 0
+  let y = 0
 
-  add(block(0, 3.2, 86, 2.2, 1, 2.2, 'bounce', BLUE2))
-  add(block(-4, 6.2, 94, 2.6, 1, 2.6, 'solid', PINK))
-  add(block(0, 6.6, 102, 2.2, 1, 2.2, 'bounce', PINK2))
-  add(block(4.2, 9.4, 110, 2.4, 1, 2.4, 'solid', BLUE))
-  add(block(0, 9.8, 118, 3.6, 1, 3.6, 'check', CREAM))
+  for (let i = 1; i <= steps; i++) {
+    const gap = i === 5 ? size + tight : stride
+    z += gap
+    y += rise
 
-  add(block(0, 9.8, 126, 1.35, 1, 8, 'solid', LILAC))
-  add(block(0, 10.2, 136, 1.2, 1, 6, 'solid', PINK2))
-  add(block(2.6, 10.6, 144, 2, 1, 2, 'moveZ', BLUE, { amp: 2.4, speed: 1.2 }))
-  add(block(-2.4, 11, 152, 2, 1, 2, 'moveZ', PINK, { amp: 2.2, speed: 1.4, phase: 2 }))
-  add(block(0, 11.4, 160, 3.2, 1, 3.2, 'check', CREAM))
+    let x = 0
+    if (lane > 0) {
+      const pair = Math.floor((i - 1) / 2) % 3
+      x = pair === 0 ? 0 : pair === 1 ? lane : -lane
+    }
+    if (i === 5 && xs.length >= 4) x = xs[3]
+    xs.push(x)
 
-  add(block(0, 11.4, 168, 2.3, 1, 2.3, 'fall', BLUE2))
-  add(block(0, 11.8, 174, 2.2, 1, 2.2, 'fall', PINK2))
-  add(block(0, 12.2, 180, 2.1, 1, 2.1, 'fall', BLUE))
-  add(block(3.2, 12.6, 186, 2.2, 1, 2.2, 'solid', PINK))
-  add(block(0, 13, 193, 3.4, 1, 3.4, 'check', CREAM))
+    let kind: Kind = 'solid'
+    const extra: Partial<Spec> = {}
+    const safe = i === 1 || i === 4 || i === 5 || i === steps
 
-  add(block(0, 13, 201, 2.4, 1, 2.4, 'solid', LILAC))
-  add(block(3.4, 13.2, 207, 1.6, 1.6, 1.6, 'hazard', HAZARD))
-  add(block(-3.4, 13.2, 213, 1.6, 1.6, 1.6, 'hazard', HAZARD))
-  add(block(0, 13.4, 219, 2.2, 1, 2.2, 'solid', PINK))
-  add(block(0, 13.4, 224.5, 1.7, 1.7, 1.7, 'hazard', HAZARD))
-  add(block(0, 13.8, 231, 2.4, 1, 2.4, 'moveY', BLUE2, { amp: 1.4, speed: 1.15 }))
-  add(block(0, 15.4, 239, 3.6, 1, 3.6, 'check', CREAM))
+    if (!safe) {
+      if (n >= 18 && i === 3) {
+        kind = 'moveX'
+        extra.amp = lerp(1.05, 2.1, t)
+        extra.speed = lerp(0.7, 1.05, t)
+      } else if (n >= 22 && i === 6 && n < 34) {
+        kind = 'moveZ'
+        extra.amp = 1.15
+        extra.speed = 0.9
+      } else if (n >= 26 && i === 6) {
+        kind = 'bounce'
+      } else if (n >= 34 && i === 7) {
+        kind = 'fall'
+      } else if (n >= 38 && i === 2 && n % 2 === 0) {
+        kind = 'moveY'
+        extra.amp = 0.7
+        extra.speed = 0.95
+      }
+    }
 
-  add(block(-3, 15.8, 247, 2, 1, 2, 'solid', PINK))
-  add(block(3, 16.2, 254, 2, 1, 2, 'solid', BLUE))
-  add(block(0, 16.8, 262, 2.2, 1, 2.2, 'bounce', PINK2))
-  add(block(0, 20.2, 270, 4.4, 1.2, 4.4, 'goal', GOLD))
-  add(block(0, 21.4, 270, 1.6, 1.6, 1.6, 'goal', CREAM))
+    add(block(x, y, z, size, 1, size, kind, tone(n, i), extra))
 
-  const bits = [
-    [0, 2.2, 15],
-    [3.2, 3.4, 48],
-    [-3.6, 4.2, 56],
-    [0, 5.4, 86],
-    [0, 12.2, 126],
-    [0, 13.8, 174],
-    [2.2, 15.4, 219],
-    [0, 18.4, 262],
-  ] as const
-  for (const [x, y, z] of bits) {
-    add(block(x, y, z, 0.45, 0.45, 0.45, 'bit', GOLD))
+    if (i === Math.floor(steps / 2) && n >= 8) {
+      add(block(x, y + 0.82, z, 1.55, 0.62, 1.55, 'check', CREAM))
+    }
+
+    if (i === 2 || i === Math.max(3, steps - 1)) {
+      add(block(x, y + 1.32, z, 0.45, 0.45, 0.45, 'bit', GOLD))
+    }
+
+    if (n >= 42 && i === 6) {
+      add(block(x + size * 0.95 + 1.15, y + 0.35, z, 1.15, 1.15, 1.15, 'hazard', HAZARD))
+    }
   }
 
+  z += stride * 0.86
+  y += 0.32
+  const goal = Math.max(size + 0.7, 3.15)
+  add(block(0, y, z, goal, 1.15, goal, 'goal', GOLD))
+  add(block(0, y + 1.12, z, 1.35, 1.35, 1.35, 'goal', CREAM))
+
   return p
+}
+
+export function courseEnd(specs: Spec[]) {
+  let max = 1
+  for (const spec of specs) {
+    if (spec.kind === 'goal') max = Math.max(max, spec.z)
+  }
+  return max
 }

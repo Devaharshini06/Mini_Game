@@ -15,15 +15,19 @@
 
     <div id="hud">
       <div class="top">
-        <div class="brand">Softcube</div>
+        <div class="brand-col">
+          <div class="brand">Softcube</div>
+          <div class="swatches mini" id="hud-swatches"></div>
+        </div>
         <div class="stats">
+          <span id="level">Level 1/50</span>
           <span id="checks">Save 0</span>
           <span id="deaths">Falls 0</span>
           <span id="bits">Bits 0</span>
         </div>
       </div>
       <div class="bar"><span id="progress"></span></div>
-      <p class="hint">WASD / arrows to move · Space to hop</p>
+      <p class="hint">Arrows / WASD to move · hold two for diagonal · Space to hop</p>
     </div>
 
     <div id="touch">
@@ -39,6 +43,15 @@
           A pink-and-blue parkour of 3D blocks. No avatars — just you, a cube,
           and quiet ASMR taps instead of a soundtrack.
         </p>
+        <div class="setup">
+          <p class="kicker">your cube</p>
+          <div class="swatches" id="swatches"></div>
+          <div class="level-pick">
+            <button id="level-prev" type="button" aria-label="Previous level">‹</button>
+            <span id="level-label">Level 1 / 50</span>
+            <button id="level-next" type="button" aria-label="Next level">›</button>
+          </div>
+        </div>
         <button id="begin" type="button">Begin the climb</button>
       </div>
     </div>
@@ -48,7 +61,10 @@
         <p class="kicker">soft landing</p>
         <h1>You made it</h1>
         <p class="lede" id="win-stats"></p>
-        <button id="again" type="button">Climb again</button>
+        <div class="win-actions">
+          <button id="next" type="button">Next climb</button>
+          <button id="again" type="button" class="ghost">Climb again</button>
+        </div>
       </div>
     </div>
 

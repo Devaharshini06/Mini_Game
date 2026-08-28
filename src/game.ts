@@ -2,18 +2,21 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { Asmr } from './audio'
 import { Input } from './input'
-import { buildCourse, type Spec } from './level'
+import { LEVEL_MAX, buildLevel, courseEnd, type Spec } from './level'
 
 const HALF = 0.45
 const GRAVITY = -46
 const JUMP = 13.8
 const BOUNCE = 17
 const SPEED = 11.5
-const AIR = 26
+const AIR = 28
 const GROUND_ACCEL = 58
 const FRICTION = 16
 const COYOTE = 0.14
 const BUFFER = 0.12
+const COLOR_KEY = 'softcube-cube'
+const UNLOCK_KEY = 'softcube-unlock'
+const DEFAULT_COLOR = 0xff74b8
 
 type Body = {
   spec: Spec
@@ -44,11 +47,24 @@ function overlap(
   )
 }
 
+function readUnlock() {
+  const raw = Number(localStorage.getItem(UNLOCK_KEY) ?? '1')
+  if (!Number.isFinite(raw)) return 1
+  return Math.max(1, Math.min(LEVEL_MAX, Math.round(raw)))
+}
+
+function readColor() {
+  const raw = Number(localStorage.getItem(COLOR_KEY) ?? DEFAULT_COLOR)
+  return Number.isFinite(raw) ? raw : DEFAULT_COLOR
+}
+
 export class Game {
   private renderer: THREE.WebGLRenderer
   private scene = new THREE.Scene()
   private camera: THREE.PerspectiveCamera
   private player: THREE.Mesh
+  private playerMat: THREE.MeshPhysicalMaterial
+  private playerEdge: THREE.LineBasicMaterial
   private shadow: THREE.Mesh
   private bodies: Body[] = []
   private input = new Input()
@@ -76,8 +92,16 @@ export class Game {
   private cam = new THREE.Vector3(0, 7, -11)
   private look = new THREE.Vector3()
   private stand: Body | null = null
+  private level = 1
+  private unlocked = 1
+  private endZ = 40
+  private cubeColor = DEFAULT_COLOR
 
   constructor(canvas: HTMLCanvasElement) {
+    this.unlocked = readUnlock()
+    this.level = this.unlocked
+    this.cubeColor = readColor()
+
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
     this.renderer.setSize(innerWidth, innerHeight)
@@ -104,21 +128,19 @@ export class Game {
     this.scene.add(sun)
 
     const geo = new RoundedBoxGeometry(0.9, 0.9, 0.9, 3, 0.14)
-    const mat = new THREE.MeshPhysicalMaterial({
-      color: 0xff74b8,
+    this.playerMat = new THREE.MeshPhysicalMaterial({
+      color: this.cubeColor,
       roughness: 0.32,
       metalness: 0.05,
       clearcoat: 0.35,
       clearcoatRoughness: 0.28,
     })
-    this.player = new THREE.Mesh(geo, mat)
+    this.player = new THREE.Mesh(geo, this.playerMat)
     this.player.castShadow = true
     this.scene.add(this.player)
-    const edge = new THREE.LineSegments(
-      new THREE.EdgesGeometry(geo),
-      new THREE.LineBasicMaterial({ color: 0x6ec4ff }),
-    )
-    this.player.add(edge)
+    this.playerEdge = new THREE.LineBasicMaterial({ color: 0x6ec4ff })
+    this.player.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo), this.playerEdge))
+    this.tintEdge()
 
     const shadowMat = new THREE.MeshBasicMaterial({
       color: 0x4a2a60,
@@ -140,26 +162,96 @@ export class Game {
     })
   }
 
+  currentLevel() {
+    return this.level
+  }
+
+  unlockedLevel() {
+    return this.unlocked
+  }
+
+  cubeTint() {
+    return this.cubeColor
+  }
+
   async begin() {
+    this.input.releaseAll()
     await this.asmr.unlock()
     this.running = true
   }
 
-  restart() {
-    this.won = false
-    this.deaths = 0
-    this.bits = 0
-    this.checkIndex = 0
-    this.spawn = { x: 0, y: 1.6, z: 0 }
-    for (const body of this.bodies) this.resetBody(body, true)
-    this.place(this.spawn.x, this.spawn.y, this.spawn.z)
+  setLevel(n: number) {
+    const next = Math.max(1, Math.min(LEVEL_MAX, Math.round(n)))
+    this.loadLevel(next)
     this.hud()
+  }
+
+  setCubeColor(hex: number) {
+    this.cubeColor = hex
+    this.playerMat.color.setHex(hex)
+    this.tintEdge()
+    localStorage.setItem(COLOR_KEY, String(hex))
+  }
+
+  restart() {
+    this.loadLevel(this.level)
     document.getElementById('win')?.classList.add('hidden')
     this.running = true
   }
 
+  nextLevel() {
+    if (this.level >= LEVEL_MAX) {
+      this.restart()
+      return
+    }
+    const next = Math.min(LEVEL_MAX, this.level + 1)
+    this.unlocked = Math.max(this.unlocked, next)
+    localStorage.setItem(UNLOCK_KEY, String(this.unlocked))
+    this.loadLevel(next)
+    document.getElementById('win')?.classList.add('hidden')
+    this.running = true
+  }
+
+  private tintEdge() {
+    const color = new THREE.Color(this.cubeColor)
+    const glow = color.r + color.g * 0.4 > 1.15 ? 0x6ec4ff : 0xff9ec8
+    this.playerEdge.color.setHex(glow)
+  }
+
+  private loadLevel(n: number) {
+    this.level = n
+    this.won = false
+    this.deaths = 0
+    this.bits = 0
+    this.checkIndex = 0
+    this.elapsed = 0
+    this.vx = 0
+    this.vy = 0
+    this.vz = 0
+    this.input.releaseAll()
+    this.clearWorld()
+    this.buildWorld()
+    this.snapCamera()
+    this.hud()
+  }
+
+  private clearWorld() {
+    for (const body of this.bodies) {
+      this.scene.remove(body.mesh)
+      body.mesh.geometry.dispose()
+      const mat = body.mesh.material
+      if (Array.isArray(mat)) mat.forEach((item) => item.dispose())
+      else mat.dispose()
+    }
+    this.bodies = []
+    this.stand = null
+  }
+
   private buildWorld() {
-    const course = buildCourse()
+    this.checkTotal = 0
+    this.bitTotal = 0
+    const course = buildLevel(this.level)
+    this.endZ = courseEnd(course)
     for (const spec of course) {
       if (spec.kind === 'check') this.checkTotal += 1
       if (spec.kind === 'bit') this.bitTotal += 1
@@ -195,6 +287,15 @@ export class Game {
         taken: false,
       })
     }
+    this.spawn = { x: 0, y: 1.6, z: 0 }
+    this.place(this.spawn.x, this.spawn.y, this.spawn.z)
+  }
+
+  private snapCamera() {
+    this.cam.set(this.px, this.py + 6.2, this.pz - 12)
+    this.look.set(this.px, this.py + 0.4, this.pz + 3)
+    this.camera.position.copy(this.cam)
+    this.camera.lookAt(this.look)
   }
 
   private loop = () => {
@@ -383,11 +484,20 @@ export class Game {
     this.won = true
     this.running = false
     this.asmr.win()
+    if (this.level < LEVEL_MAX) {
+      this.unlocked = Math.max(this.unlocked, this.level + 1)
+      localStorage.setItem(UNLOCK_KEY, String(this.unlocked))
+    }
     const panel = document.getElementById('win')
     const stats = document.getElementById('win-stats')
+    const next = document.getElementById('next')
+    const title = panel?.querySelector('h1')
+    if (title) title.textContent = this.level >= LEVEL_MAX ? 'You made it' : 'Nice climb'
     if (stats) {
-      stats.textContent = `${this.deaths} falls · ${this.bits}/${this.bitTotal} bits · still the same cube`
+      const more = this.level >= LEVEL_MAX ? 'all 50 climbs' : `level ${this.level} of ${LEVEL_MAX}`
+      stats.textContent = `${more} · ${this.deaths} falls · ${this.bits}/${this.bitTotal} bits`
     }
+    if (next) next.classList.toggle('hidden', this.level >= LEVEL_MAX)
     panel?.classList.remove('hidden')
   }
 
@@ -435,13 +545,16 @@ export class Game {
     const deaths = document.getElementById('deaths')
     const bits = document.getElementById('bits')
     const bar = document.getElementById('progress')
+    const level = document.getElementById('level')
+    if (level) level.textContent = `Level ${this.level}/${LEVEL_MAX}`
     if (checks) checks.textContent = `Saves ${this.checkIndex}/${Math.max(this.checkTotal - 1, 1)}`
     if (deaths) deaths.textContent = `Falls ${this.deaths}`
     if (bits) bits.textContent = `Bits ${this.bits}/${this.bitTotal}`
     if (bar) {
-      const span = Math.max(1, 270)
-      bar.style.width = `${Math.min(100, (this.pz / span) * 100)}%`
+      bar.style.width = `${Math.min(100, (this.pz / Math.max(1, this.endZ)) * 100)}%`
     }
+    const pick = document.getElementById('level-label')
+    if (pick) pick.textContent = `Level ${this.level} / ${LEVEL_MAX}`
   }
 
   private resize = () => {
