@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Softcube</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+
+    <div id="hud">
+      <div class="top">
+        <div class="brand">Softcube</div>
+        <div class="stats">
+          <span id="checks">Save 0</span>
+          <span id="deaths">Falls 0</span>
+          <span id="bits">Bits 0</span>
+        </div>
+      </div>
+      <div class="bar"><span id="progress"></span></div>
+      <p class="hint">WASD / arrows to move · Space to hop</p>
+    </div>
+
+    <div id="touch">
+      <div id="stick"><div id="knob"></div></div>
+      <button id="hop" type="button" aria-label="Jump">hop</button>
+    </div>
+
+    <div id="veil" class="screen">
+      <div class="card">
+        <p class="kicker">you are the cube</p>
+        <h1>Softcube</h1>
+        <p class="lede">
+          A pink-and-blue parkour of 3D blocks. No avatars — just you, a cube,
+          and quiet ASMR taps instead of a soundtrack.
+        </p>
+        <button id="begin" type="button">Begin the climb</button>
+      </div>
+    </div>
+
+    <div id="win" class="screen hidden" aria-hidden="true">
+      <div class="card">
+        <p class="kicker">soft landing</p>
+        <h1>You made it</h1>
+        <p class="lede" id="win-stats"></p>
+        <button id="again" type="button">Climb again</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
